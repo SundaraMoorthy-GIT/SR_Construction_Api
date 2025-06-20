@@ -1,0 +1,150 @@
+<div class="row">
+    <div class="col-md-12 nopad">
+        <div class="card content ">
+
+            <div class=" Head ">
+
+
+
+                <div class="card-header  d-flex justify-content-between align-items-center">
+                    <h3>Instrument Standard Procedure</h3>
+
+                    <div class="dropdown">
+
+
+                        
+                        <a (click)="appservice.back()" class="x">
+                            <b>X</b>
+                        </a>
+
+
+                    </div>
+                </div>
+
+            </div>
+
+            <div  class="content_body">
+
+
+
+                <form #addForm="ngForm"(ngSubmit)="addData(addForm)"
+                    (keydown.enter)="$event.preventDefault()" novalidate>
+
+                    <div class="row">
+                        <div class="col-sm-8">
+
+                            <div class="form-table table-responsive">
+                                <table class="table table-bordered">
+                                    <tbody>
+                                        <tr>
+                                            <td>Ins Type<span class="text-danger">*</span></td>
+                                            <td>
+                                                <select   class="select2-option form-control"  aria-hidden="true"
+                                                [(ngModel)]="add.Instument_Type"required
+                                                  name="Instument_Type" #Instument_Type="ngModel">
+                                                 <option *ngFor="let row of appservice.get_ref('INS_Type')" value={{row.label}}>
+                                                     {{row.label}}
+                                                 </option>
+                                               </select>
+                    
+                                              
+                                             
+                                              <div *ngIf="addForm.submitted && Instument_Type.invalid" class="invalid-feedback d-block">
+                                                <div class="error">Instument Type Should not Empty</div>
+                                              </div>
+                                            </td>
+                                          </tr>
+                                        <tr>
+
+                                            <td>
+                                                Ref No <span class="text-danger"></span>
+                                                <input  placeholder="Ref No"
+                                                    class="form-control" type="text" [(ngModel)]="add.Ref_No"
+                                                    name="Ref_No" #Ref_No="ngModel"></td>
+                                          
+                                          
+                                        </tr>
+
+                                        <tr>
+
+                                            <td>
+                                                Ref Standard <span class="text-danger"></span>
+                                                <input  
+                                                    class="form-control" type="text" [(ngModel)]="add.Ref_Standard"
+                                                    name="Ref_Standard" #Ref_Standard="ngModel"></td>
+                                          
+                                          
+                                        </tr>
+                                        <tr>
+
+                                            <td>
+                                                Revision <span class="text-danger"></span>
+                                                <input 
+                                                    class="form-control" type="text" [(ngModel)]="add.Revision"
+                                                    name="Revision" #Revision="ngModel"></td>
+                                          
+                                          
+                                        </tr>
+                                        <tr>
+
+                                            <td>
+                                                Active Status<span class="text-danger"></span>
+                                                <input 
+                                                    class="form-control" type="text" [(ngModel)]="add.Active_Status"
+                                                    name="Active_Status" #Active_Status="ngModel"></td>
+                                          
+                                          
+                                        </tr>
+                                        <tr>
+
+                                            <td>
+                                                Remarks<span class="text-danger"></span>
+                                                <input 
+                                                    class="form-control" type="text" [(ngModel)]="add.Remarks"
+                                                    name="Remarks" #Remarks="ngModel"></td>
+                                          
+                                          
+                                        </tr>
+                                        <tr>
+
+                                            <td>
+                                                Rev Date<span class="text-danger"></span>
+                                                <input 
+                                                    class="form-control" type="text" [(ngModel)]="add.Rev_Date"
+                                                    name="Rev_Date" #Rev_Date="ngModel"></td>
+                                          
+                                          
+                                        </tr>
+
+
+
+
+
+
+                                    </tbody>
+                                </table>
+
+
+
+
+
+
+
+
+                            </div>
+                        </div>
+
+
+
+
+
+
+
+                    </div>
+                </form>
+
+
+
+            </div>
+        </div>
+    </div>

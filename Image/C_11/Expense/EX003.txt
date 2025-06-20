@@ -1,0 +1,269 @@
+  public add: any = {};
+  public btndisable: boolean = false;
+  public Customer_Name = "Select Customer Name";
+  public addForm: any = {};
+  public rs = [];
+
+  date: Date;
+  public GST_No = "";
+  constructor(public confirmationService: ConfirmationService, public appservice: AppService, private toastr: ToastrService, private router: Router, private http: HttpClient) {
+
+
+    this.rs = this.appservice.get_fields_of('Group_Member_Details');
+
+    if (this.appservice.isadd_Page == true) {
+      this.appservice.isadd_Page = false;
+    
+    }
+    else if (this.appservice.isEdit) {
+      try {
+        this.appservice.header_Row.Start_Date = appservice.datefromat(this.appservice.header_Row.Start_Date);
+        this.appservice.header_Row.End_Date = appservice.datefromat(this.appservice.header_Row.End_Date);
+
+
+       
+
+      } catch { }
+    }
+    else {
+      this.appservice.header_Row = {};
+      this.appservice.Details_Row = [];
+      this.clear();
+      this.appservice.header_Row.ID = "0";
+      this.get_Group_Code();
+      this.date = new Date();
+      this.date.setDate(this.date.getDate() + 15);
+
+    
+    
+    }
+
+
+    if (this.appservice.Group_Enable == true) {
+      this.appservice.Ledger_Group_ = "1";
+    }
+
+
+    this.appservice.Sales_Temp_Row = {};
+  }
+
+
+
+ 
+
+
+
+ 
+  clear() {
+
+    this.appservice.get_fields_of('Group_Master').forEach((activity) => {
+      if (activity.Default_Value == "T_Date") {
+        this.appservice.header_Row[activity.Field] = this.appservice.T_Date;
+      }
+      else {
+        this.appservice.header_Row[activity.Field] = activity.Default_Value;
+      }
+    });
+  }
+  get_Group_Code() {
+
+     
+      
+    this.appservice.getc("Api/Collection_/get_Group_Code").subscribe((res: any) => {
+      this.appservice.header_Row.Group_Code = res;
+    });
+  
+
+}
+
+
+
+  del_row(item) {
+    this.confirmationService.confirm({
+      message: 'Are you sure that you want to delete press Yes?',
+      accept: () => {
+        this.Delete(item)
+      }
+    });
+  }
+
+  Delete(item) {
+
+    var index = item;
+
+
+    if (index > -1) {
+      this.appservice.Details_Row.splice(index, 1);
+    }
+    this.appservice.Details_Row = this.appservice.Details_Row;
+  }
+
+  
+  d: any = {}
+  temp_data: any = {};
+
+
+  L_Stock = 0;
+  L_Uni_Code = 0;
+  L_Landing_Cost = 0;
+  L_L_Rate = 0;
+
+
+  get_by_Code_S(data, type) {
+    try {
+
+      this.get_by_Code(this.temp_data.ID, type)
+    } catch { }
+  }
+
+ 
+  get_by_Code(data, name)
+  {
+ alert(data)
+    try{
+    this.temp_data = this.appservice.Ledger_Master_Rows.filter(e => e.ID == data)[0];
+  
+    this.appservice.Sales_Temp_Row.Ledger_ID = this.temp_data.ID;
+    this.appservice.Sales_Temp_Row.Ledger_Group = this.temp_data.Ledger_Group;
+    this.appservice.Sales_Temp_Row.Ledger_Nme = this.temp_data.Ledger_Nme;
+
+    }catch{}
+  }
+
+  x: string = ""
+  out() {
+
+
+
+  }
+
+
+ 
+
+
+
+  place_holder = "Type Ledger Name here..";
+  calc_tempdata() {
+
+
+    }
+   
+
+
+
+
+ 
+
+  
+
+  check_duplicate(data): boolean {
+
+    var index = this.appservice.Details_Row.findIndex(function (item, i) {
+      return item.Uni_Code === data.Uni_Code
+    });
+    if (index >= 0) {
+      this.temp_data = {}
+      data = {};
+      this.appservice.Sales_Temp_Row.Item_Name = "";
+      this.appservice.Sales_Temp_Row = {};
+      this.toastr.error("Same item already added", "Error", { timeOut: 3000 });
+      return true;
+    }
+    return false;
+  }
+
+
+  add_data(data) {
+
+
+
+
+   
+
+      
+      this.appservice.Details_Row.push(data);
+      this.appservice.Sales_Temp_Row = {};
+   
+    
+
+  }
+
+
+ 
+ 
+  next() {
+   
+
+  }
+
+
+  public addValidation: boolean = false;
+  headers;
+  data;
+  isadd = "0";
+  isload: boolean = false;
+
+
+  get_customers() {
+   
+
+  }
+
+  Valid: boolean = true;
+  Place_Order() {
+
+    this.appservice.header_Row.Company = this.appservice.Company;
+    this.appservice.header_Row.Created_by = this.appservice.CREATED_BY;
+    this.appservice.header_Row.items = this.appservice.Details_Row;
+    this.appservice.header_Row.Ledger_Update = this.appservice.Ledger_Update;
+
+    this.Valid = true;
+    this.appservice.get_fields_of('Group_Master').forEach((data) => {
+      this.addForm.submitted = true;
+      if (data.Validate == "True" && this.appservice.header_Row[data.Field] == "") {
+        this.Valid = false;
+      }
+
+    });
+
+    this.add.items = this.appservice.cart_item;
+    this.headers = new Headers({ 'Content-Type': 'application/json; charset=utf-8' });
+
+
+    if (this.Valid) {
+      this.btndisable = true;
+      this.http.post(this.appservice.Server_URL + 'api/Collection_/Post_Group', this.appservice.header_Row, { headers: this.headers })
+        .subscribe(
+          (val: string) => {
+            this.btndisable = false;
+            if (val == "True") {
+              this.toastr.success("Submtted Successfully", 'Msg');
+
+             
+
+              this.appservice.isEdit = false;
+              this.appservice.get_Group_Details();
+              this.appservice.header_Row = {};
+              this.appservice.Details_Row = [];
+              this.appservice.Temp_Order_Row = [];
+              this.appservice.Clear_Cart()
+              this.appservice.back();
+
+              this.appservice.Sales_Temp_Row = {};
+            }
+            else {
+              this.toastr.error(val, "Error", { timeOut: 3000 });
+            }
+          },
+          response => {
+            this.toastr.error('Error ', response, {
+              timeOut: 3000
+            });
+          });
+    }
+  }
+
+  ngOnInit(): void {
+  }
+
+}
