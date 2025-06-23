@@ -47,6 +47,7 @@ namespace Genuine_API.Controllers
 
 
         public EWBSession EwbSession = new EWBSession();
+        bool isProduction = true; // set this based on your config or environment
 
 
         public void load_EwbSession(string Company)
@@ -54,8 +55,8 @@ namespace Genuine_API.Controllers
             try
             {
                 DataTable dd = GITAPI.dbFunctions.getTable("select * from Company_Master where CM_ID='" + Company.Replace("_", "") + "'");
-                EwbSession.LoadAPISettingsFromConfigFile = false;
-                EwbSession.LoadAPILoginDetailsFromConfigFile = false;
+                EwbSession.LoadAPISettingsFromConfigFile = true;
+                EwbSession.LoadAPILoginDetailsFromConfigFile = true;
                 EwbSession.EwbApiSetting.AspUserId = dd.Rows[0]["CM_AspUserId"].ToString();
                 EwbSession.EwbApiSetting.AspPassword = dd.Rows[0]["CM_AspPassword"].ToString();
                 EwbSession.EwbApiSetting.EWBClientId = dd.Rows[0]["CM_ClientId"].ToString();
@@ -65,8 +66,9 @@ namespace Genuine_API.Controllers
                 {
                     // Use production values from DataTable
                     EwbSession.EwbApiSetting.GSPName = dd.Rows[0]["CM_GSPName"].ToString();
+                    EwbSession.EwbApiSetting.AuthUrl = "https://einvapi.charteredinfo.com/v1.03/dec/auth";
                     EwbSession.EwbApiSetting.BaseUrl = dd.Rows[0]["CM_BaseUrl"].ToString();
-                    EwbSession.EwbApiSetting.AspUrl = dd.Rows[0]["CM_AspUrl"].ToString();
+                    EwbSession.EwbApiSetting.AspUrl = null;
                     EwbSession.EwbApiLoginDetails.EwbGstin = dd.Rows[0]["CM_Gstin"].ToString();
                     EwbSession.EwbApiLoginDetails.EwbUserID = dd.Rows[0]["CM_UserID"].ToString();
                     EwbSession.EwbApiLoginDetails.EwbPassword = dd.Rows[0]["CM_Password"].ToString();
@@ -76,7 +78,7 @@ namespace Genuine_API.Controllers
                     // Use sandbox values for testing or development
                     EwbSession.EwbApiSetting.GSPName = "TaxPro_Sandbox"; // Sandbox GSP Name
                     EwbSession.EwbApiSetting.BaseUrl = "http://gstsandbox.charteredinfo.com/ewaybillapi/v1.03"; // Sandbox Base URL
-                    EwbSession.EwbApiSetting.AspUrl = ""; // Sandbox ASP URL
+                    EwbSession.EwbApiSetting.AspUrl = null; // Sandbox ASP URL
                     EwbSession.EwbApiLoginDetails.EwbGstin = "34AACCC1596Q002"; // Sandbox GSTIN
                     EwbSession.EwbApiLoginDetails.EwbUserID = "TaxProEnvPON"; // Sandbox User ID
                     EwbSession.EwbApiLoginDetails.EwbPassword = "abc34*"; // Sandbox Password
@@ -174,6 +176,36 @@ namespace Genuine_API.Controllers
                 return InternalServerError(ex); // Return 500 status code for internal errors
             }
         }
+
+
+        [HttpGet]
+        public async Task<IHttpActionResult> Get_GSTNDetails(string GSTIN, string Company)
+        {
+            load_EwbSession(Company);
+            string rtbResponse;
+
+            try
+            {
+                var response = await EWBAPI.GetGSTNDetailAsync(EwbSession, GSTIN);
+
+                if (response.IsSuccess)
+                {
+                    rtbResponse = JsonConvert.SerializeObject(response.RespObj);
+                }
+                else
+                {
+                    rtbResponse = JsonConvert.SerializeObject(response.TxnOutcome); ;
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                rtbResponse = $"Error: {ex.Message}";
+            }
+            // Return both ewbGen and rtbResponse
+            return Ok(new { Data = GSTIN, Response = rtbResponse });
+        }
+
 
         [HttpGet]
         public async Task<IHttpActionResult> Gen_DC_EWB(string DC_No, string Company)
@@ -869,7 +901,6 @@ namespace Genuine_API.Controllers
 
         eInvoiceSession eInvSession = new eInvoiceSession(true, true);
 
-        bool isProduction = false; // set this based on your config or environment
         public void load_eInvoiceSession(string Company)
         {
             try
@@ -1139,7 +1170,7 @@ namespace Genuine_API.Controllers
                " \"ItemList\": [  ";
 
 
-            DataTable ddp = GITAPI.dbFunctions.getTable("select dbo.get_ref_value(sal_uom) as sal_uom,* from Sales_details where sal_bill_no='" + InvoiceNo + "' and sal_branch='" + Company.Replace("_", "") + "'");
+            DataTable ddp = GITAPI.dbFunctions.getTable("select * from Sales_details where sal_bill_no='" + InvoiceNo + "' and sal_branch='" + Company.Replace("_", "") + "'");
 
             for (int i = 0; i < ddp.Rows.Count; i++)
             {

@@ -5,6 +5,7 @@ using Owin;
 using Microsoft.Owin.Security.OAuth;
 using System.Web.Http;
 using System.Web.Http.Cors;
+using System.Net;
 
 [assembly: OwinStartup(typeof(Genuine_API.Startup))]
 
@@ -14,6 +15,7 @@ namespace Genuine_API
     {
         public void Configuration(IAppBuilder app)
         {
+            System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
             // For more information on how to configure your application, visit http://go.microsoft.com/fwlink/?LinkID=316888
             //enable cors origin requests
             app.UseCors(Microsoft.Owin.Cors.CorsOptions.AllowAll);

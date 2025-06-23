@@ -30,6 +30,40 @@ namespace API.Controllers
             }
         }
 
+        [HttpGet]
+        public string Update_Balance(string Company)
+        {
+            DataTable dt = GITAPI.dbFunctions.getTable("select * from Ledger_Master where cus_status='A' ");
+
+            if (dt.Rows.Count > 0)
+            {
+                for (int i = 0; i < dt.Rows.Count; i++)
+                {
+                    string ID = dt.Rows[i]["cus_id"].ToString();
+                    if (dt.Rows[i]["cus_type"].ToString() == "Customer")
+                    {
+                        try
+                        {
+                            Acc_Data.Accounts_Update(Acc_Data.G_Type_Sales, ID, Company, "Sales");
+                        }
+                        catch { }
+                    }
+                    else
+                    {
+                        try
+                        {
+                            Acc_Data.Accounts_Update(Acc_Data.G_Type_Purchase, ID, Company, "Purchase");
+                        }
+                        catch { }
+
+                    }
+
+                }
+            }
+
+            return "True";
+        }
+
 
 
         [HttpGet]

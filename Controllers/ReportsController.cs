@@ -27,9 +27,14 @@ namespace API.Controllers
 
 
         [HttpGet]
-        public string get_DB_Bank_Details(string From, string To, string Company)
+        public string get_DB_Bank_Details(string From, string To, string Branch_ID, string Company)
         {
-            string Quary = "select y.Account_Number+'-'+Bank_Name as Ledger_Name ,sum(x.db_cramt1-x.db_dbamt1) as Amount from DayBook x left outer join Bank_Master y on  x.db_received_bank=y.ID where db_branch_id='" + Company.Replace("_", "") + "' group by y.Account_Number+'-'+Bank_Name ";
+            string condi = "";
+            if (!Branch_ID.ToLower().Equals("0"))
+            {
+                condi += " and  db_branch_id='" + Branch_ID + "' ";
+            }
+            string Quary = "select y.Account_Number+'-'+Bank_Name as Ledger_Name ,sum(x.db_cramt1-x.db_dbamt1) as Amount from DayBook x left outer join Bank_Master y on  x.db_received_bank=y.ID where 0=0 "+ condi + " group by y.Account_Number+'-'+Bank_Name ";
             DataTable dt = GITAPI.dbFunctions.getTable(Quary);
             string data = GITAPI.dbFunctions.GetJSONString(dt);
             return data;
@@ -37,7 +42,7 @@ namespace API.Controllers
 
 
         [HttpGet]
-        public string get_Transport_Report(string From, string To, string transid, string Project, string type, string Company)
+        public string get_Transport_Report(string From, string To, string transid, string Project, string type, string Branch_ID, string Company)
         {
             string condi = "";
             condi += " and convert(Varchar,tpt_date,112)>='" + DateTime.Parse(From).ToString("yyyyMMdd") + "' and convert(Varchar,tpt_date,112)<='" + DateTime.Parse(To).ToString("yyyyMMdd") + "'";
@@ -47,9 +52,14 @@ namespace API.Controllers
                 condi += " and  tpt_transid='" + transid + "' ";
             }
 
-            if (!Company.ToLower().Equals("0"))
+            if (!Branch_ID.ToLower().Equals("0"))
             {
-                condi += " and  tpt_company='" + Company.Replace("_", "") + "' ";
+                condi += " and  tpt_branch='" + Branch_ID + "' ";
+            }
+
+            if (!transid.ToLower().Equals("0"))
+            {
+                condi += " and  tpt_transid='" + transid + "' ";
             }
 
             if (!type.ToLower().Equals("all"))
@@ -179,6 +189,7 @@ namespace API.Controllers
             condi += " and  x.pur_type='Purchase' ";
 
 
+            condi += " and  y.pur_prodname!='' ";
             string query = " select x.pur_purchase_no as Purchase_No, x.pur_bill_no as Bill_No, x.pur_bill_date as Purchase_Date, dbo.date_(x.pur_bill_date) as Purchase_Date_, x.pur_ledger_id as Ledger_ID,x.pur_ledger_name as Supplier_Name, " +
                 " x.pur_contact_no as Contact_No , x.pur_bill_mode as Bill_Mode, y.pur_prodname as Item_Name, sum(y.pur_qty) as Qty,sum(y.pur_net_amt) as Amount, " +
                 " x.pur_created_by as [User],sum(y.pur_qty*y.pur_rate) as [S_Rate],sum((y.pur_qty*y.pur_rate)-y.pur_net_amt) as Profit,x.pur_pay_mode as Pay_Mode_ " +
@@ -391,13 +402,16 @@ namespace API.Controllers
         [HttpGet]
 
 
-        public string get_Log_Book_Entry_Report(string From, string To, string Company = "0")
+        public string get_Log_Book_Entry_Report(string From, string To, string Branch_ID, string Company = "0")
         {
             string condi = "";
             condi += " AND CONVERT(VARCHAR, lbe_date, 112) >= '" + DateTime.Parse(From).ToString("yyyyMMdd") + "' ";
             condi += " AND CONVERT(VARCHAR, lbe_date, 112) <= '" + DateTime.Parse(To).ToString("yyyyMMdd") + "' ";
             condi += " AND lbe_status = 'A' ";
-
+            if (!Branch_ID.Equals("0"))
+            {
+                condi += " lbe_branch='" + Branch_ID + "' ";
+            }
             string q = "WITH KM_Calculation AS ( " +
              " SELECT Veh_Type, " +
              " lbe_vehicle_no, " +
@@ -523,10 +537,14 @@ namespace API.Controllers
         }
 
         [HttpGet]
-        public string get_Fuel_Entry_Reports(string From, string To, string Type, string Company)
+        public string get_Fuel_Entry_Reports(string From, string To, string Type, string Branch_ID, string Company)
         {
             string Query = "";
             string condi = "";
+            if (!Branch_ID.ToLower().Equals("0"))
+            {
+                condi += " and be_branch='" + Branch_ID + "' ";
+            }
             if (!Type.ToLower().Equals("all"))
             {
                 condi += " and be_type='" + Type + "' ";
@@ -690,6 +708,89 @@ namespace API.Controllers
             DataTable dt = GITAPI.dbFunctions.getTable(Query);
             string data = GITAPI.dbFunctions.GetJSONString(dt);
             return data;
+        }
+
+
+        [HttpGet]
+        public string get_Currenct_Stock(string From, string To, string Branch_ID, string Company)
+        {
+
+
+            string condi = "";
+
+            //if (!(Category.ToLower() == ("all") || Category == "0" || Category == null))
+            //{
+            //    condi += " and  pd_category='" + Category + "'";
+            //}
+
+            //if (!(Brand.ToLower() == ("all") || Brand == "0" || Brand == null))
+            //{
+            //    condi += " and  pd_brand='" + Brand + "'";
+            //}
+
+            //if (Branch_ID.ToLower() == "0")
+            //{
+            //    condi += " and  Branch_ID='"+Branch_ID+"' ";
+            //}
+            string Query = " select Item_ID,pm_item_code as Item_Code,pm_item_name as Item_Name,pm_description as Description, " +
+                " pm_category as Category,y.pm_rate as Rate,y.pm_mrpprice as MRP, " +
+                " sum(Inward_Qty-OutWard_Qty) as Stock ,cast(sum(Inward_Qty-OutWard_Qty)*y.pm_rate as decimal(18,2)) as Value  " +
+                " from Stock_Details x " +
+                " Left outer join Product_Master y on x.Item_ID=y.pm_id where 0=0  " + condi + " " +
+                "  group by pm_item_name,pm_item_code,Item_ID,pm_category,pm_description,y.pm_rate,y.pm_mrpprice " +
+                " having sum(Inward_Qty-OutWard_Qty)!=0 " +
+                " order by pm_item_name ";
+
+            DataTable dt = GITAPI.dbFunctions.getTable(Query);
+            string data = GITAPI.dbFunctions.GetJSONString(dt);
+            return data;
+
+        }
+
+
+        [HttpGet]
+        public string get_Item_Stock(string Item_ID, string From, string To, string Company)
+        {
+
+
+            string condi = "";
+            condi += " and convert(Varchar,x.Voucher_Date,112)>='" + DateTime.Parse(From).ToString("yyyyMMdd") + "' and convert(Varchar,x.Voucher_Date,112)<='" + DateTime.Parse(To).ToString("yyyyMMdd") + "'";
+
+            string Query = "select *,dbo.Date_(Voucher_Date) as Voucher_Date_,0 as Balance from Stock_Details x Left outer join Product_Master y on x.Item_ID=y.pm_id where   Item_ID=" + Item_ID + " order by Voucher_Date";
+
+            DataTable dt = GITAPI.dbFunctions.getTable(Query);
+            string data = GITAPI.dbFunctions.GetJSONString(dt);
+            return data;
+
+        }
+
+
+        [HttpGet]
+        public string get_Stock_Report(string From, string To, string Branch_ID, string Company)
+        {
+
+
+            string condi = "";
+
+
+            //if (!(Group.ToLower() == ("all") || Group == "0" || Group == null))
+            //{
+            //    condi += " and  Item_Group='" + Group + "'";
+            //}
+
+
+            string Query = " select pm_id as ID,pm_item_code as Item_Code,pm_item_name as Item_Name,pm_description as Description,pm_category as Category,y.pm_rate as Rate, " +
+                           " (select isnull(sum(Inward_Qty-OutWard_Qty),0) stock from Stock_Details z where z.Item_ID=y.pm_id and convert(Varchar,z.Voucher_Date,112)<'" + DateTime.Parse(From).ToString("yyyyMMdd") + "' ) as Opening," +
+                           " (select isnull(sum(Inward_Qty),0) stock from Stock_Details z where z.Item_ID=y.pm_id and convert(Varchar,z.Voucher_Date,112)>='" + DateTime.Parse(From).ToString("yyyyMMdd") + "' and convert(Varchar,z.Voucher_Date,112)<='" + DateTime.Parse(To).ToString("yyyyMMdd") + "') as Inward," +
+                           " (select isnull(sum(OutWard_Qty),0) stock from Stock_Details z where z.Item_ID=y.pm_id and convert(Varchar,z.Voucher_Date,112)>='" + DateTime.Parse(From).ToString("yyyyMMdd") + "' and convert(Varchar,z.Voucher_Date,112)<='" + DateTime.Parse(To).ToString("yyyyMMdd") + "' ) as Outward," +
+                           " (select isnull(sum(Inward_Qty-OutWard_Qty),0) stock from Stock_Details z where z.Item_ID=y.pm_id and convert(Varchar,z.Voucher_Date,112)<='" + DateTime.Parse(To).ToString("yyyyMMdd") + "' ) as Closing" +
+                           " from  Product_Master y  where 0=0 " + condi +
+                           "  order by pm_item_name ";
+
+            DataTable dt = GITAPI.dbFunctions.getTable(Query);
+            string data = GITAPI.dbFunctions.GetJSONString(dt);
+            return data;
+
         }
 
     }
