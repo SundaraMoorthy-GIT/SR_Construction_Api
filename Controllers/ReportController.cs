@@ -482,6 +482,256 @@ namespace Genuine_API.Controllers
             return new EmptyResult(); // No need to redirect as the response is handled directly
         }
 
+        public ActionResult JsontToExcel_1(string User, string Company, string File_Name, string File_Type)
+        {
+            JObject jsonData;
+            DataTable dd = GITAPI.dbFunctions.getTable("select * from Excel_Data" + Company + " where user_ID='" + User + "'");
+
+            if (dd.Rows.Count > 0)
+            {
+                jsonData = JObject.Parse(dd.Rows[0]["Data"].ToString());
+
+                dynamic json = jsonData;
+                string ID = GITAPI.dbFunctions.isnull(json.ID, "");
+                string FileName = GITAPI.dbFunctions.isnull(json.FileName, "Data");
+                string Report_Name = GITAPI.dbFunctions.isnull(json.Report_Name, "");
+                string Group_Name = GITAPI.dbFunctions.isnull(json.Group_Name, "");
+
+
+                Newtonsoft.Json.Linq.JArray items = json.items;
+                Newtonsoft.Json.Linq.JArray Header = json.Header;
+
+                DataTable dt = toDataTable(items);
+
+                DataTable th = toDataTable(Header);
+
+                Get_Compay_Details(Company);
+
+                Response.ClearContent();
+                Response.Buffer = true;
+                Response.AddHeader("content-disposition", "attachment; filename=" + FileName + ".xls");
+                Response.ContentType = "application/ms-excel";
+                Response.Charset = "utf-8";
+                Response.ContentEncoding = System.Text.Encoding.GetEncoding("windows-1250");
+                Response.Write("<font style='font-size:10.0pt; font-family:Calibri;'>");
+                Response.Write("<BR><BR><BR>");
+                //sets the table border, cell spacing, border color, font of the text, background, foreground, font height
+                Response.Write("<Table border='1' bgColor='#ffffff' " +
+                  "borderColor='#000000' cellSpacing='0' cellPadding='0' " +
+                  "style='font-size:12.0pt; font-family:Times New Roman; background:white;'> " +
+
+                "  <caption ><font style='font-size:13.0pt;'><B>" + Company_Name + "</b></font><br> " + Company_Address1 + "<br>" + Company_Address2 + "" + Company_Address3 + "<br> <B>" + Report_Name + "<br> <B>" + Group_Name + "</B> </caption> ");
+                //am getting my grid's column headers
+
+
+                Response.Write(" <TR>");
+                for (int j = 0; j < th.Rows.Count; j++)
+                {      //write in new column
+                    if (j == 0)
+                    {
+                        Response.Write("<Td><B> # </B></Td>");
+                    }
+
+                    Response.Write("<Td>");
+                    //Get column headers  and make it as bold in excel columns
+                    Response.Write("<B>");
+                    Response.Write(th.Rows[j]["Name"].ToString());
+                    Response.Write("</B>");
+                    Response.Write("</Td>");
+                }
+                Response.Write("</TR>");
+                int s = 1;
+                string date = "";
+                for (int j = 0; j < dt.Rows.Count; j++)
+                {//write in new row
+                    Response.Write("<TR style='font-size:11.0pt; font-family:Times New Roman; background:white;'>");
+                    for (int i = 0; i < th.Rows.Count; i++)
+                    {
+                        try
+                        {
+                            date = dt.Rows[j - 1]["tpt_date"].ToString();
+                        }
+                        catch
+                        {
+                            date = dt.Rows[j]["tpt_date"].ToString();
+                        }
+                        if (i == 0)
+                        {
+                            if (dt.Rows[j]["tpt_date"].ToString() == date)
+                            {
+                                if (j == 0)
+                                {
+                                    Response.Write("<Td> " + (s) + "</Td>");
+                                }
+                                else
+                                {
+                                    Response.Write("<Td>  </Td>");
+                                }
+                            }
+                            else
+                            {
+                                s = s + 1;
+                                Response.Write("<Td> " + (s) + "</Td>");
+
+                            }
+                        }
+
+                        Response.Write("<Td>");
+                        Response.Write(dt.Rows[j]["" + th.Rows[i]["Field"].ToString() + ""].ToString());
+                        Response.Write("</Td>");
+                    }
+
+                    Response.Write("</TR>");
+                }
+
+
+
+
+                Response.Write("<TR style='font-size:11.0pt; font-family:Times New Roman; background:wheat;'>");
+
+
+                for (int i = 0; i < th.Rows.Count; i++)
+                {
+                    if (i == 0)
+                    {
+                        Response.Write("<Td><B></B></Td>");
+                    }
+
+                    decimal d = 0.0m;
+                    int l_ = 0;
+
+                    for (int k = 0; k < dt.Rows.Count; k++)
+                    {
+
+                        try
+                        {
+                            d += decimal.Parse(dt.Rows[k]["" + th.Rows[i]["Field"].ToString() + ""].ToString());
+                        }
+                        catch
+                        {
+                            l_ = 1;
+                            break;
+                        }
+                    }
+
+                    Response.Write("<Td>");
+                    try
+                    {
+                        if (l_ == 0)
+                        {
+
+                            Response.Write(d);
+                        }
+                    }
+                    catch { }
+                    Response.Write("</Td>");
+                }
+
+                Response.Write("</TR>");
+
+                dynamic result = from tab in dt.AsEnumerable()
+                                 group tab by tab["tpt_projectname"]
+                     into groupDt
+                                 select new
+                                 {
+                                     tpt_projectname = groupDt.Key,
+                                     tpt_amount = groupDt.Sum((r) => decimal.Parse(r["tpt_amount"].ToString())),
+                                     //FixedSalary = groupDt.Select(r => r["FixedSalary"].ToString()).FirstOrDeafult()
+                                 };
+
+                string json3 = Newtonsoft.Json.JsonConvert.SerializeObject(result);
+                DataTable pDt = JsonConvert.DeserializeObject<DataTable>(json3);
+                // Copy rows to DataTable
+                DataTable dtTemp = pDt;//toDataTable(result);
+
+
+
+                string str = "[{ \"Field\":\"tpt_projectname\" ,\"Name\":\"Project Name\",\"align\":\"\"}," +
+                              " { \"Field\":\"tpt_amount\" ,\"Name\":\"Amount\",\"align\":\"right\"}]";
+
+                Newtonsoft.Json.Linq.JArray item1 = Newtonsoft.Json.Linq.JArray.Parse(str);
+
+                DataTable th1 = toDataTable(item1);
+                Response.Write("<br><br>");
+                for (int j = 0; j < dtTemp.Rows.Count; j++)
+                {//write in new row
+
+                    Response.Write("<TR style='font-size:11.0pt; font-family:Times New Roman; background:white;'>");
+
+                    for (int i = 0; i < th1.Rows.Count; i++)
+                    {
+                        if (i == 0)
+                        {
+                            Response.Write("<Td> </Td>");
+                            Response.Write("<Td> " + (j + 1) + "</Td>");
+                        }
+
+                        Response.Write("<Td>");
+                        Response.Write(dtTemp.Rows[j]["" + th1.Rows[i]["Field"].ToString() + ""].ToString());
+                        Response.Write("</Td>");
+                    }
+
+                    Response.Write("</TR>");
+                }
+
+
+
+
+                Response.Write("<TR style='font-size:11.0pt; font-family:Times New Roman; background:wheat;'>");
+
+
+                for (int i = 0; i < th1.Rows.Count; i++)
+                {
+                    if (i == 0)
+                    {
+                        Response.Write("<Td><B></B></Td>");
+                        Response.Write("<Td><B></B></Td>");
+                    }
+
+                    decimal d = 0.0m;
+                    int l_ = 0;
+
+                    for (int k = 0; k < dtTemp.Rows.Count; k++)
+                    {
+
+                        try
+                        {
+                            d += decimal.Parse(dtTemp.Rows[k]["" + th1.Rows[i]["Field"].ToString() + ""].ToString());
+                        }
+                        catch
+                        {
+                            l_ = 1;
+                            break;
+                        }
+                    }
+
+                    Response.Write("<Td>");
+                    try
+                    {
+                        if (l_ == 0)
+                        {
+
+                            Response.Write(d);
+                        }
+                    }
+                    catch { }
+                    Response.Write("</Td>");
+                }
+
+                Response.Write("</TR>");
+                Response.Write("</Table>");
+                Response.Write("</font>");
+
+
+
+
+                Response.Flush();
+                Response.End();
+            }
+            return View("Index");
+
+
+        }
 
 
 
