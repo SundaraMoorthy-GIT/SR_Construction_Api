@@ -42,7 +42,7 @@ namespace API.Controllers
 
 
         [HttpGet]
-        public string get_Transport_Report(string From, string To, string transid, string Project, string type, string Branch_ID, string Company)
+        public string get_Transport_Report(string From, string To, string transid, string Project, string type, string Branch_ID="0", string Company="0")
         {
             string condi = "";
             condi += " and convert(Varchar,tpt_date,112)>='" + DateTime.Parse(From).ToString("yyyyMMdd") + "' and convert(Varchar,tpt_date,112)<='" + DateTime.Parse(To).ToString("yyyyMMdd") + "'";
